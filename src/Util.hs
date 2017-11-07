@@ -24,12 +24,15 @@ tileMoves gs (y,x) = pieceMoves gs (y,x) t where
   pieceMoves _ _ EmptyTile = []
   pieceMoves gs (y,x) (Tile (_,King)) = map (\to -> FromToMove (y,x) to) tos where
     tos = filter (noCollision gs) raw_tos
-    raw_tos = [(y',x') | y' <- [0..7], x' <- [0..7], abs (y - y') == 1, abs (x - x') == 1]
+    raw_tos = [(y',x') | y' <- [0..7], x' <- [0..7], (abs (y - y') == 1 && abs (x - x') == 1) || (y - y' == 0 && abs (x - x') == 1) || (abs (y - y') == 1 && x - x' == 0)]
+    
   -- TODO these are stubs
   pieceMoves gs (y,x) (Tile (_,Queen)) = []
   pieceMoves gs (y,x) (Tile (_,Bishop)) = []
   pieceMoves gs (y,x) (Tile (_,Rook)) = []
-  pieceMoves gs (y,x) (Tile (_,Knight)) = []
+  pieceMoves gs (y,x) (Tile (_,Knight)) = map (\to -> FromToMove (y, x) to) tos where
+    tos = filter (noCollision gs) raw_tos
+    raw_tos = [(y',x') | y' <- [0..7], x' <- [0..7], (abs (y' - y) == 1 && abs (x' - x) == 2) || (abs (y' - y) == 2 && abs (x' - x) == 1)]
   pieceMoves gs (y,x) (Tile (_,Pawn)) = []
 
 flipLoc :: Location -> Location
