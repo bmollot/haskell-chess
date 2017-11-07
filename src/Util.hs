@@ -67,14 +67,17 @@ winningTeam gs = foldl (\a -> \(_,_,g) -> if a == Nothing then firstColor $ take
 
 -- The standard starting chess board
 initBoard :: Board
-initBoard = [[Tile (Black, Rook), Tile (Black, Knight), Tile (Black, Bishop), Tile (Black, King), Tile (Black, Queen), Tile (Black, Bishop), Tile (Black, Knight), Tile (Black, Rook)],
-  [Tile (Black, Pawn), Tile (Black, Pawn), Tile (Black, Pawn), Tile (Black, Pawn), Tile (Black, Pawn), Tile (Black, Pawn), Tile (Black, Pawn), Tile (Black, Pawn)],
-  [EmptyTile, EmptyTile, EmptyTile, EmptyTile, EmptyTile, EmptyTile, EmptyTile, EmptyTile],
-  [EmptyTile, EmptyTile, EmptyTile, EmptyTile, EmptyTile, EmptyTile, EmptyTile, EmptyTile],
-  [EmptyTile, EmptyTile, EmptyTile, EmptyTile, EmptyTile, EmptyTile, EmptyTile, EmptyTile],
-  [EmptyTile, EmptyTile, EmptyTile, EmptyTile, EmptyTile, EmptyTile, EmptyTile, EmptyTile],
-  [Tile (White, Pawn), Tile (White, Pawn), Tile (White, Pawn), Tile (White, Pawn), Tile (White, Pawn), Tile (White, Pawn), Tile (White, Pawn), Tile (White, Pawn)],
-  [Tile (White, Rook), Tile (White, Knight), Tile (White, Bishop), Tile (White, King), Tile (White, Queen), Tile (White, Bishop), Tile (White, Knight), Tile (White, Rook)]]
+initBoard =
+  [(map (Tile) blackPieces)] ++
+  [(replicate 8 (Tile (Black, Pawn)))] ++
+  [(emptyRows)] ++ [(emptyRows)] ++ [(emptyRows)] ++ [(emptyRows)] ++
+  [(replicate 8 (Tile (White, Pawn)))] ++
+  [(map (Tile) whitePieces)]
+  where
+    blackPieces = [(Black, Rook), (Black, Knight), (Black, Bishop), (Black, King), (Black, Queen), (Black, Bishop), (Black, Knight), (Black, Rook)]
+    whitePieces = [(White, Rook), (White, Knight), (White, Bishop), (White, King), (White, Queen), (White, Bishop), (White, Knight), (White, Rook)]
+    emptyRows = (replicate 8 EmptyTile)
+
 
 -- The initial game state (starting board, no pieces taken yet)
 initState :: GameState
