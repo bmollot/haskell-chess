@@ -14,12 +14,15 @@ instance Show Color where
   show White = "W"
   show Black = "B"
 
-data Tile = EmptyTile | Tile Piece
+data Direction = North | South | West | East | NorthEast | NorthWest | SouthEast | SouthWest
+
+data Tile = EmptyTile | Tile Piece deriving Eq
 instance Show Tile where
   show EmptyTile = "  "
   show (Tile (c, t)) = show c ++ show t
 
 data Move = FromToMove Location Location | PawnPromote Location Location PieceType | LeftCastle | RightCastle | Forfeit
+  deriving (Eq, Show)
 
 type Piece = (Color, PieceType)
 type Location = (Int, Int)
