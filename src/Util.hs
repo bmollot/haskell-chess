@@ -2,6 +2,7 @@ module Util where
 
 import Types
 import Data.Char
+import qualified Data.Vector as V
 
 tileAt :: GameState -> Location -> Tile
 tileAt (_,b,_) (y,x) = b!!y!!x
@@ -85,7 +86,16 @@ tileMoves gs (y,x) = pieceMoves gs (y,x) t where
     tos = filter (noCollision gs) raw_tos
     raw_tos = [(y',x') | y' <- [0..7], x' <- [0..7], (abs (y' - y) == 1 && abs (x' - x) == 2) || (abs (y' - y) == 2 && abs (x' - x) == 1)]
     
-  pieceMoves gs (y,x) (Tile (_,Pawn)) = []
+  pieceMoves gs (y,x) (Tile (_,Pawn)) = if (y < 6) then map (\to -> FromToMove (y,x) to) finalLst else if (y == 6) then promoteLst else [] where
+
+
+    leftDiagonal = [(y+1, x-1) | x-1 >= 0, tileAt gs (y+1, x-1) /= EmptyTile, noCollision gs (y+1, x-1)]
+    rightDiagonal = [(y+1, x+1) | x+1 <= 7, tileAt gs (y+1, x+1) /= EmptyTile, noCollision gs (y+1,x+1)]
+    northLst = if (y == 1) then getLst else oneUpLst
+    getLst = if tileAt gs (y+1,x) == EmptyTile && (noCollision gs (y+2,x)) then [(y+1,x),(y+2,x)] else oneUpLst
+    oneUpLst = if (noCollision gs (y+1,x)) then [(y+1,x)] else []
+    finalLst = leftDiagonal ++ rightDiagonal ++ northLst
+    promoteLst = [PawnPromote (y,x) to piece | to <- finalLst, piece <- [Queen, Knight, Rook, Bishop]]
 
 flipLoc :: Location -> Location
 flipLoc (y,x) = (7 - y, x)
@@ -100,7 +110,7 @@ flipTile EmptyTile = EmptyTile
 flipTile (Tile p) = Tile (flipPiece p)
 
 flipBoard :: Board -> Board
-flipBoard b = (map (\row -> map flipTile row) b)
+flipBoard b = reverse (map (\row -> map flipTile row) b)
 
 flipTaken :: [Piece] -> [Piece]
 flipTaken ps = map flipPiece ps
@@ -111,7 +121,15 @@ flipPiece (Black, t) = (White, t)
 -- Returns all valid moves for the player whose turn it is
 validMoves :: GameState -> [Move]
 validMoves (Black, b, g) = map flipMove $ validMoves (White, flipBoard b, flipTaken g)
-validMoves (White, b, g) = []
+validMoves (White, b, g) = resultLst where
+  pawnMoves = [moves | x <- [0..7], y <- [0..7], tileAt (White,b,g) (x,y) == Tile (White, Pawn), moves <- tileMoves (White,b,g) (x,y)]
+  rookMoves = [moves | x <- [0..7], y <- [0..7], tileAt (White,b,g) (x,y) == Tile (White, Rook), moves <- tileMoves (White,b,g) (x,y)]
+  knightMoves = [moves | x <- [0..7], y <- [0..7], tileAt (White,b,g) (x,y) == Tile (White, Knight), moves <- tileMoves (White,b,g) (x,y)]
+  bishopMoves = [moves | x <- [0..7], y <- [0..7], tileAt (White,b,g) (x,y) == Tile (White, Bishop), moves <- tileMoves (White,b,g) (x,y)]
+  queenMoves = [moves | x <- [0..7], y <- [0..7], tileAt (White,b,g) (x,y) == Tile (White, Queen), moves <- tileMoves (White,b,g) (x,y)]
+  kingMoves = [moves | x <- [0..7], y <- [0..7], tileAt (White,b,g) (x,y) == Tile (White, King), moves <- tileMoves (White,b,g) (x,y)]
+
+  resultLst = pawnMoves ++ rookMoves ++ knightMoves ++ bishopMoves ++ queenMoves ++ kingMoves 
 
 -- Returns Just <winning color> if the game is over, otherwise Nothing
 winningTeam :: GameState -> Maybe Color
@@ -139,13 +157,29 @@ initState = (White, initBoard, [])
 -- Applies a move, changing piece positions and taking pieces if necessary
 doMove :: GameState -> Move -> GameState
 doMove (Black,b,g) m = doMove (White, flipBoard b, flipTaken g) (flipMove m)
-doMove (White,b,g) _ = (Black,b,g) -- TODO This is a stub
+doMove (White,b,g) (FromToMove (y,x) to) = (Black, resulting_board, updated_taken_lst) where
+  
+
+
+  updated_taken_lst = if to_tile == EmptyTile then g else let (Tile x) = to_tile in (x:g)
+  to_tile = (tileAt (White, b, g) to)
+  outerVector = V.fromList b
+  from_Vector = V.fromList (b!!y)
+  tile_piece = (tileAt (White, b, g) (y,x))
+  to_Vector = V.fromList (b!!(fst to))
+  update_toVector = to_Vector V.// [((snd to), tile_piece)]
+  update_fromVector = from_Vector V.// [(x, EmptyTile)]
+  outer_update1 = outerVector V.// [(y, V.toList update_fromVector)]
+  final_updated_vector = outer_update1 V.// [((fst to), V.toList update_toVector)]
+  resulting_board = V.toList final_updated_vector
+  
+  --(Black,b,g) -- TODO This is a stub
 
 -- Print the current state of the game
 printGame :: GameState -> IO ()
 printGame (c, b, _) = do
   print c
-  sequence $ map (print) b
+  sequence $ reverse (map (print) b)
   return ()
 
 showLoc :: Location -> String
