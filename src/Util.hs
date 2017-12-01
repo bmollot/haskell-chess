@@ -156,10 +156,12 @@ initState = (White, initBoard, [])
 
 -- Applies a move, changing piece positions and taking pieces if necessary
 doMove :: GameState -> Move -> GameState
-doMove (Black,b,g) m = doMove (White, flipBoard b, flipTaken g) (flipMove m)
+{-doMove (Black,b,g) m = doMove (White, flipBoard b, flipTaken g) (flipMove m)
 doMove (White,b,g) (FromToMove (y,x) to) = (Black, resulting_board, updated_taken_lst) where
-  
+-}
 
+doMove (Black,b,g) m = let newState@(color,board,lst) = doMove (White, flipBoard b, flipTaken g) (flipMove m) in (White, flipBoard board, flipTaken lst)
+doMove (White,b,g) (FromToMove (y,x) to) = (Black, resulting_board, updated_taken_lst) where
 
   updated_taken_lst = if to_tile == EmptyTile then g else let (Tile x) = to_tile in (x:g)
   to_tile = (tileAt (White, b, g) to)

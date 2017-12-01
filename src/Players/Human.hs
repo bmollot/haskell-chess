@@ -6,7 +6,7 @@ import Data.Char
 
 processMove :: GameState -> IO Move
 processMove gs = do
-  putStrLn "Enter move in the format: PieceCharFromFileFromRank_ToFileToRank :> "
+  putStrLn "\nEnter move in the format: PieceCharFromFileFromRank_ToFileToRank :> "
   input <- getMove
   let piece = toUpper (input!!0)
   let fromFile = input!!1
