@@ -29,4 +29,4 @@ type Location = (Int, Int)
 type Board = [[Tile]] -- 8 x 8
 -- Current turn, current board and taken pieces
 type GameState = (Color, Board, [Piece])
-type Player = (String, GameState -> Move)
+type Player = (String, GameState -> IO Move)
