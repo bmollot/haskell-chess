@@ -5,13 +5,13 @@ import Data.Char
 import qualified Data.Vector as V
 
 tileAt :: GameState -> Location -> Tile
-tileAt (_,b,_) (y,x) = b!!y!!x
+tileAt (_,b,_,_) (y,x) = b!!y!!x
 
 onBoard :: Location -> Bool
 onBoard (y,x) = y >= 0 && y < 8 && x >= 0 && x < 8
 
 noCollision :: GameState -> Location -> Bool
-noCollision gs@(c,b,_) l = case t of
+noCollision gs@(c,b,_,_) l = case t of
   EmptyTile -> True
   Tile (c',_) -> c /= c'
   where
@@ -43,10 +43,10 @@ canJumpTil gs (y, x) dir =
       nWstLst = [(y1, x1) | y1 <- [y+1..7], x1 <- [0..x-1], abs (y1 - y) == abs (x1 - x), tileAt gs (y1, x1) /= EmptyTile]
       sEstLst = [(y1, x1) | y1 <- [0..y-1], x1 <- [x+1..7], abs (y1 - y) == abs (x1 - x), tileAt gs (y1, x1) /= EmptyTile]
       sWstLst = [(y1, x1) | y1 <- [0..y-1], x1 <- [0..x-1], abs (y1 - y) == abs (x1 - x), tileAt gs (y1, x1) /= EmptyTile]
-      
+
 -- Returns all valid moves from the specified tile for the given Board
 tileMoves :: GameState -> Location -> [Move]
-tileMoves (Black,b,g) l = map flipMove $ tileMoves (White, flipBoard b, flipTaken g) (flipLoc l)
+tileMoves gs@(Black,_,_,_) l = map flipMove $ tileMoves (flipGame gs) (flipLoc l)
 tileMoves gs (y,x) = pieceMoves gs (y,x) t where
   t = tileAt gs (y,x)
   pieceMoves _ _ EmptyTile = []
@@ -115,25 +115,29 @@ flipBoard b = reverse (map (\row -> map flipTile row) b)
 flipTaken :: [Piece] -> [Piece]
 flipTaken ps = map flipPiece ps
 
+flipPiece :: Piece -> Piece
 flipPiece (White, t) = (Black, t)
 flipPiece (Black, t) = (White, t)
 
+flipGame :: GameState -> GameState
+flipGame (c, b, t, (b1, b2)) = (if c == White then Black else White, flipBoard b, flipTaken t, (b2, b1))
+
 -- Returns all valid moves for the player whose turn it is
 validMoves :: GameState -> [Move]
-validMoves (Black, b, g) = map flipMove $ validMoves (White, flipBoard b, flipTaken g)
-validMoves (White, b, g) = resultLst where
-  pawnMoves = [moves | x <- [0..7], y <- [0..7], tileAt (White,b,g) (x,y) == Tile (White, Pawn), moves <- tileMoves (White,b,g) (x,y)]
-  rookMoves = [moves | x <- [0..7], y <- [0..7], tileAt (White,b,g) (x,y) == Tile (White, Rook), moves <- tileMoves (White,b,g) (x,y)]
-  knightMoves = [moves | x <- [0..7], y <- [0..7], tileAt (White,b,g) (x,y) == Tile (White, Knight), moves <- tileMoves (White,b,g) (x,y)]
-  bishopMoves = [moves | x <- [0..7], y <- [0..7], tileAt (White,b,g) (x,y) == Tile (White, Bishop), moves <- tileMoves (White,b,g) (x,y)]
-  queenMoves = [moves | x <- [0..7], y <- [0..7], tileAt (White,b,g) (x,y) == Tile (White, Queen), moves <- tileMoves (White,b,g) (x,y)]
-  kingMoves = [moves | x <- [0..7], y <- [0..7], tileAt (White,b,g) (x,y) == Tile (White, King), moves <- tileMoves (White,b,g) (x,y)]
+validMoves gs@(Black,_,_,_) = map flipMove $ validMoves $ flipGame gs
+validMoves gs = resultLst where
+  pawnMoves = [moves | x <- [0..7], y <- [0..7], tileAt gs (x,y) == Tile (White, Pawn), moves <- tileMoves gs (x,y)]
+  rookMoves = [moves | x <- [0..7], y <- [0..7], tileAt gs (x,y) == Tile (White, Rook), moves <- tileMoves gs (x,y)]
+  knightMoves = [moves | x <- [0..7], y <- [0..7], tileAt gs (x,y) == Tile (White, Knight), moves <- tileMoves gs (x,y)]
+  bishopMoves = [moves | x <- [0..7], y <- [0..7], tileAt gs (x,y) == Tile (White, Bishop), moves <- tileMoves gs (x,y)]
+  queenMoves = [moves | x <- [0..7], y <- [0..7], tileAt gs (x,y) == Tile (White, Queen), moves <- tileMoves gs (x,y)]
+  kingMoves = [moves | x <- [0..7], y <- [0..7], tileAt gs (x,y) == Tile (White, King), moves <- tileMoves gs (x,y)]
 
   resultLst = pawnMoves ++ rookMoves ++ knightMoves ++ bishopMoves ++ queenMoves ++ kingMoves 
 
 -- Returns Just <winning color> if the game is over, otherwise Nothing
 winningTeam :: GameState -> Maybe Color
-winningTeam gs = foldl (\a -> \(_,_,g) -> if a == Nothing then firstColor $ takenKings g else a) Nothing gss where
+winningTeam gs = foldl (\a -> \(_,_,g,_) -> if a == Nothing then firstColor $ takenKings g else a) Nothing gss where
   firstColor xs = foldl (\a -> \x -> if a == Nothing then Just x else a) Nothing (map (\(c,_) -> c) xs)
   takenKings = filter (\(_,t) -> t == King)
   gss = map (doMove gs) $ validMoves gs
@@ -152,35 +156,41 @@ initBoard =
 
 -- The initial game state (starting board, no pieces taken yet)
 initState :: GameState
-initState = (White, initBoard, [])
+initState = (White, initBoard, [], ((True, True), (True, True)))
 
 -- Applies a move, changing piece positions and taking pieces if necessary
 doMove :: GameState -> Move -> GameState
-doMove (Black,b,g) m = doMove (White, flipBoard b, flipTaken g) (flipMove m)
-doMove (White,b,g) (FromToMove (y,x) to) = (Black, resulting_board, updated_taken_lst) where
-  
-
-
-  updated_taken_lst = if to_tile == EmptyTile then g else let (Tile x) = to_tile in (x:g)
-  to_tile = (tileAt (White, b, g) to)
-  outerVector = V.fromList b
-  from_Vector = V.fromList (b!!y)
-  tile_piece = (tileAt (White, b, g) (y,x))
-  to_Vector = V.fromList (b!!(fst to))
-  update_toVector = to_Vector V.// [((snd to), tile_piece)]
-  update_fromVector = from_Vector V.// [(x, EmptyTile)]
-  outer_update1 = outerVector V.// [(y, V.toList update_fromVector)]
-  final_updated_vector = outer_update1 V.// [((fst to), V.toList update_toVector)]
-  resulting_board = V.toList final_updated_vector
-  
-  --(Black,b,g) -- TODO This is a stub
+doMove gs@(Black,_,_,_) m = doMove (flipGame gs) (flipMove m)
+doMove gs@(White,b,g,((p1lc, p1rc), (p2lc, p2rc))) (FromToMove from@(y,x) to@(y', x')) =
+  (Black, resulting_board, updated_taken_lst, ((p1lc', p1rc'), (p2lc', p2rc'))) where
+    updated_taken_lst = if to_tile == EmptyTile then g else let (Tile x) = to_tile in (x:g)
+    to_tile = (tileAt gs to)
+    outerVector = V.fromList b
+    from_Vector = V.fromList (b!!y)
+    tile_piece = (tileAt gs from)
+    to_Vector = V.fromList (b!!(fst to))
+    update_toVector = to_Vector V.// [((snd to), tile_piece)]
+    update_fromVector = from_Vector V.// [(x, EmptyTile)]
+    outer_update1 = outerVector V.// [(y, V.toList update_fromVector)]
+    final_updated_vector = outer_update1 V.// [((fst to), V.toList update_toVector)]
+    resulting_board = V.toList final_updated_vector
+    p1lc' = not ((y == 0) && (x == 0 || x == 3)) && p1lc
+    p1rc' = not ((y == 0) && (x == 7 || x == 3)) && p1rc
+    p2lc' = not ((y' == 0) && (x' == 0 || x' == 3)) && p2lc
+    p2rc' = not ((y' == 0) && (x' == 7 || x' == 3)) && p2rc
 
 -- Print the current state of the game
 printGame :: GameState -> IO ()
-printGame (c, b, _) = do
+printGame (c, b, _, _) = do
   print c
-  sequence $ reverse (map (print) b)
+  putStrLn "┌──┬──┬──┬──┬──┬──┬──┬──┐"
+  sequence $ reverse (map (printRow) $ zip b [0..])
+  putStrLn "└──┴──┴──┴──┴──┴──┴──┴──┘"
   return ()
+  where
+    printRow (r,n) = do
+      putStrLn $ concat ["│", show $ r!!0, "│", show $ r!!1, "│", show $ r!!2, "│", show $ r!!3, "│", show $ r!!4, "│", show $ r!!5, "│", show $ r!!6, "│", show $ r!!7, "│"]
+      if n == 0 then return () else putStrLn "├──┼──┼──┼──┼──┼──┼──┼──┤"
 
 showLoc :: Location -> String
 showLoc (y,x) = (chr (ord 'a' + x)):(show (8 - y))

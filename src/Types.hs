@@ -11,22 +11,36 @@ instance Show PieceType where
 
 data Color = White | Black deriving Eq
 instance Show Color where
-  show White = "W"
-  show Black = "B"
+  show White = "White"
+  show Black = "Black"
 
 data Direction = North | South | West | East | NorthEast | NorthWest | SouthEast | SouthWest
 
 data Tile = EmptyTile | Tile Piece deriving Eq
 instance Show Tile where
   show EmptyTile = "  "
-  show (Tile (c, t)) = show c ++ show t
+  show (Tile p) = showPiece p
 
-data Move = FromToMove Location Location | PawnPromote Location Location PieceType | LeftCastle | RightCastle | Forfeit
+data Move = FromToMove Location Location | PawnPromote Location Location PieceType | LeftCastle | RightCastle | OfferDraw | Forfeit
   deriving (Eq, Show)
 
 type Piece = (Color, PieceType)
+showPiece :: Piece -> String
+showPiece (White, King) = "♔ "
+showPiece (White, Queen) = "♕ "
+showPiece (White, Rook) = "♖ "
+showPiece (White, Bishop) = "♗ "
+showPiece (White, Knight) = "♘ "
+showPiece (White, Pawn) = "♙ "
+showPiece (Black, King) = "♚ "
+showPiece (Black, Queen) = "♛ "
+showPiece (Black, Rook) = "♜ "
+showPiece (Black, Bishop) = "♝ "
+showPiece (Black, Knight) = "♞ "
+showPiece (Black, Pawn) = "♟ "
+
 type Location = (Int, Int)
 type Board = [[Tile]] -- 8 x 8
--- Current turn, current board and taken pieces
-type GameState = (Color, Board, [Piece])
+-- Current turn, current board, taken pieces, ((Player 1 Left Castle Legal, P1 RC legal), (P2 LC legal, P2 RC legal))
+type GameState = (Color, Board, [Piece], ((Bool, Bool), (Bool, Bool)))
 type Player = (String, GameState -> IO Move)

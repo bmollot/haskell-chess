@@ -17,8 +17,8 @@ cabal-version:       >=1.10
 
 executable haskell-chess
   main-is:             Main.hs
-  -- other-modules:       
+  other-modules:       Players.Human, Types, Util
   -- other-extensions:    
-  build-depends:       base >=4.10 && <4.11
+  build-depends:       base >=4.10 && <4.11, vector
   hs-source-dirs:      src
   default-language:    Haskell2010
