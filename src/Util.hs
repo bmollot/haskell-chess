@@ -160,7 +160,7 @@ initState = (White, initBoard, [], ((True, True), (True, True)))
 
 -- Applies a move, changing piece positions and taking pieces if necessary
 doMove :: GameState -> Move -> GameState
-doMove gs@(Black,_,_,_) m = doMove (flipGame gs) (flipMove m)
+doMove gs@(Black,_,_,_) m = flipGame $ doMove (flipGame gs) (flipMove m)
 doMove gs@(White,b,g,((p1lc, p1rc), (p2lc, p2rc))) (FromToMove from@(y,x) to@(y', x')) =
   (Black, resulting_board, updated_taken_lst, ((p1lc', p1rc'), (p2lc', p2rc'))) where
     updated_taken_lst = if to_tile == EmptyTile then g else let (Tile x) = to_tile in (x:g)
