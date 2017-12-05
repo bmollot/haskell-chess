@@ -1,26 +1,38 @@
 module Main where
 
+import System.Environment
+
 import Types
 import Util
-import Players.Human (processMove)
-
---player1 :: Player
---player2 :: Player
+import qualified Players.Human as Hum
+import qualified Players.TestA as TestA
+import qualified Players.TestB as TestB
 
 main :: IO ()
 main = do
+  args <- getArgs
+  if args == ["test"] then runTest else runHumanGame
+
+runHumanGame :: IO ()
+runHumanGame = do
   putStrLn "Enter Player 1's name: "
   player1_name <- getLine
   putStrLn "Enter Player 2's name: "
   player2_name <- getLine
-  putStrLn "\n initial board setup "
+  putStrLn "\ninitial board setup "
   printGame initState
-  play (player1_name, processMove) (player2_name, processMove) initState
+  play (player1_name, Hum.processMove) (player2_name, Hum.processMove) initState
   putStrLn ("\nGoodBye")
 
+runTest :: IO ()
+runTest = do
+  putStrLn "Running tests..."
+  play ("TestA", TestA.processMove) ("TestB", TestB.processMove) initState
+
+
 play :: Player -> Player -> GameState -> IO ()
-play player1@(p1_name,func) player2@(p2_name, func2) gs = do
-  move <- processMove gs
+play player1@(p1_name,func) player2 gs = do
+  move <- func gs
   let newState = doMove gs move
   putStrLn ("\n board after " ++ p1_name ++ "'s move ")
   printGame newState

@@ -253,11 +253,16 @@ doMove gs@(White,b,g,((p1lc, p1rc), (p2lc, p2rc))) RightCastle =
     --final_updated_vector = outer_update1 V.// [((fst to), V.toList update_toVector)]
     resulting_board = V.toList outer_update1
 
+doMove (White,b,g,c) Forfeit = (Black, b, (White,King):g, c)
+
+doMove gs _ = gs
+
 
 -- Print the current state of the game
 printGame :: GameState -> IO ()
-printGame (c, b, _, _) = do
+printGame (c, b, g, _) = do
   print c
+  print g
   putStrLn "   ┌──┬──┬──┬──┬──┬──┬──┬──┐"
   sequence $ reverse (map (printRow) $ zip b [0..])
   putStrLn "   └──┴──┴──┴──┴──┴──┴──┴──┘"
