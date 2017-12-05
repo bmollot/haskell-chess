@@ -93,7 +93,7 @@ tileMoves gs (y,x) = pieceMoves gs (y,x) t where
     rightDiagonal = [(y+1, x+1) | x+1 <= 7, tileAt gs (y+1, x+1) /= EmptyTile, noCollision gs (y+1,x+1)]
     northLst = if (y == 1) then getLst else oneUpLst
     getLst = if tileAt gs (y+1,x) == EmptyTile && (noCollision gs (y+2,x)) then [(y+1,x),(y+2,x)] else oneUpLst
-    oneUpLst = if (noCollision gs (y+1,x)) then [(y+1,x)] else []
+    oneUpLst = if ((tileAt gs (y+1,x)) == EmptyTile) then [(y+1,x)] else []
     finalLst = leftDiagonal ++ rightDiagonal ++ northLst
     promoteLst = [PawnPromote (y,x) to piece | to <- finalLst, piece <- [Queen, Knight, Rook, Bishop]]
 
@@ -124,7 +124,7 @@ flipGame (c, b, t, (b1, b2)) = (if c == White then Black else White, flipBoard b
 
 -- Returns all valid moves for the player whose turn it is
 validMoves :: GameState -> [Move]
-validMoves gs@(Black,_,_,_) = map flipMove $ validMoves $ flipGame gs
+validMoves gs@(Black,_,_,((p1lc, p1rc),(p2lc,p2rc))) = map flipMove $ validMoves $ flipGame gs
 validMoves gs = resultLst where
   pawnMoves = [moves | x <- [0..7], y <- [0..7], tileAt gs (x,y) == Tile (White, Pawn), moves <- tileMoves gs (x,y)]
   rookMoves = [moves | x <- [0..7], y <- [0..7], tileAt gs (x,y) == Tile (White, Rook), moves <- tileMoves gs (x,y)]
@@ -132,9 +132,37 @@ validMoves gs = resultLst where
   bishopMoves = [moves | x <- [0..7], y <- [0..7], tileAt gs (x,y) == Tile (White, Bishop), moves <- tileMoves gs (x,y)]
   queenMoves = [moves | x <- [0..7], y <- [0..7], tileAt gs (x,y) == Tile (White, Queen), moves <- tileMoves gs (x,y)]
   kingMoves = [moves | x <- [0..7], y <- [0..7], tileAt gs (x,y) == Tile (White, King), moves <- tileMoves gs (x,y)]
-
   resultLst = pawnMoves ++ rookMoves ++ knightMoves ++ bishopMoves ++ queenMoves ++ kingMoves 
 
+validCastleMoves :: GameState -> [Move]
+validCastleMoves gs@(Black,b,_,((p1lc, p1rc),(p2lc,p2rc))) = resultLst where
+  lcEmpty = ((tileAt gs (7,1) == EmptyTile) && (tileAt gs (7,2) == EmptyTile) && (tileAt gs (7,3) == EmptyTile))
+  rcEmpty = ((tileAt gs (7,5) == EmptyTile) && (tileAt gs (7,6) == EmptyTile))
+  opponentMoves = validMoves (White, b, [], ((p1lc,p1rc), (p2lc, p2rc)))
+  leftClear = foldl (\a x -> if (to (7,3) x) == False then False else a) True opponentMoves
+  rightClear = foldl (\a x -> if (to (7,5) x) == False then False else a) True opponentMoves
+  leftCastle = if (p1lc == True && lcEmpty && leftClear) then [LeftCastle] else []
+  rightCastle = if (p1rc == True && rcEmpty && rightClear) then [RightCastle] else []
+  resultLst = leftCastle ++ rightCastle
+  to (y1,x1) move =
+    case move of
+      FromToMove from (y',x') -> if (((y' == y1) && (x' == x1)) || ((y' == 7) && (x' == 4))) then False else True
+      PawnPromote from (y',x') piece -> if (((y' == y1) && (x' == x1)) || ((y' == 7) && (x' == 4))) then False else True
+
+validCastleMoves gs@(_,b,_,((p1lc,p1rc),(p2lc,p2rc))) = resultLst where
+  lcEmpty = ((tileAt gs (0,1) == EmptyTile) && (tileAt gs (0,2) == EmptyTile) && (tileAt gs (0,3) == EmptyTile))
+  rcEmpty = ((tileAt gs (0,5) == EmptyTile) && (tileAt gs (0,6) == EmptyTile))
+  opponentMoves = validMoves (White, flipBoard b, [], ((p1lc,p1rc), (p2lc, p2rc)))
+  leftClear = foldl (\a x -> if (to (7,3) x) == False then False else a) True opponentMoves
+  rightClear = foldl (\a x -> if (to (7,5) x) == False then False else a) True opponentMoves
+  leftCastle = if (p1lc == True && lcEmpty && leftClear) then [LeftCastle] else []
+  rightCastle = if (p1rc == True && rcEmpty && rightClear) then [RightCastle] else []
+  resultLst = leftCastle ++ rightCastle
+  to (y1,x1) move =
+    case move of
+      FromToMove from (y',x') -> if (((y' == y1) && (x' == x1)) || ((y' == 7) && (x' == 4))) then False else True
+      PawnPromote from (y',x') piece -> if (((y' == y1) && (x' == x1)) || ((y' == 7) && (x' == 4))) then False else True
+      
 -- Returns Just <winning color> if the game is over, otherwise Nothing
 winningTeam :: GameState -> Maybe Color
 winningTeam gs = foldl (\a -> \(_,_,g,_) -> if a == Nothing then firstColor $ takenKings g else a) Nothing gss where
@@ -149,8 +177,8 @@ initBoard =
   [(emptyRows)] ++ [(emptyRows)] ++ [(emptyRows)] ++ [(emptyRows)] ++
   [(replicate 8 (Tile (Black, Pawn)))] ++ [(map (Tile) blackPieces)]
   where
-    blackPieces = [(Black, Rook), (Black, Knight), (Black, Bishop), (Black, King), (Black, Queen), (Black, Bishop), (Black, Knight), (Black, Rook)]
-    whitePieces = [(White, Rook), (White, Knight), (White, Bishop), (White, King), (White, Queen), (White, Bishop), (White, Knight), (White, Rook)]
+    blackPieces = [(Black, Rook), (Black, Knight), (Black, Bishop), (Black, Queen), (Black, King), (Black, Bishop), (Black, Knight), (Black, Rook)]
+    whitePieces = [(White, Rook), (White, Knight), (White, Bishop), (White, Queen), (White, King), (White, Bishop), (White, Knight), (White, Rook)]
     emptyRows = (replicate 8 EmptyTile)
 
 
@@ -174,23 +202,71 @@ doMove gs@(White,b,g,((p1lc, p1rc), (p2lc, p2rc))) (FromToMove from@(y,x) to@(y'
     outer_update1 = outerVector V.// [(y, V.toList update_fromVector)]
     final_updated_vector = outer_update1 V.// [((fst to), V.toList update_toVector)]
     resulting_board = V.toList final_updated_vector
-    p1lc' = not ((y == 0) && (x == 0 || x == 3)) && p1lc
-    p1rc' = not ((y == 0) && (x == 7 || x == 3)) && p1rc
-    p2lc' = not ((y' == 0) && (x' == 0 || x' == 3)) && p2lc
-    p2rc' = not ((y' == 0) && (x' == 7 || x' == 3)) && p2rc
+    p1lc' = not ((y == 0) && (x == 0 || x == 4)) && p1lc
+    p1rc' = not ((y == 0) && (x == 7 || x == 4)) && p1rc
+    p2lc' = not ((y' == 0) && (x' == 0 || x' == 4)) && p2lc
+    p2rc' = not ((y' == 0) && (x' == 7 || x' == 4)) && p2rc
+
+doMove gs@(White,b,g,((p1lc, p1rc), (p2lc, p2rc))) (PawnPromote from@(y,x) to@(y', x') piece) =
+  (Black, resulting_board, updated_taken_lst, ((p1lc', p1rc'), (p2lc', p2rc'))) where
+    updated_taken_lst = if to_tile == EmptyTile then g else let (Tile x) = to_tile in (x:g)
+    to_tile = (tileAt gs to)
+    outerVector = V.fromList b
+    from_Vector = V.fromList (b!!y)
+    tile_piece = (tileAt gs from)
+    to_Vector = V.fromList (b!!(fst to))
+    update_toVector = to_Vector V.// [((snd to), Tile (White,piece))]
+    update_fromVector = from_Vector V.// [(x, EmptyTile)]
+    outer_update1 = outerVector V.// [(y, V.toList update_fromVector)]
+    final_updated_vector = outer_update1 V.// [((fst to), V.toList update_toVector)]
+    resulting_board = V.toList final_updated_vector
+    p1lc' = not ((y == 0) && (x == 0 || x == 4)) && p1lc
+    p1rc' = not ((y == 0) && (x == 7 || x == 4)) && p1rc
+    p2lc' = not ((y' == 0) && (x' == 0 || x' == 4)) && p2lc
+    p2rc' = not ((y' == 0) && (x' == 7 || x' == 4)) && p2rc
+
+doMove gs@(White,b,g,((p1lc, p1rc), (p2lc, p2rc))) LeftCastle =
+  (Black, resulting_board, g, ((False, p1rc), (p2lc, p2rc))) where
+    --to_tile = (tileAt gs to)
+    outerVector = V.fromList b
+    from_Vector = V.fromList (b!!0)
+    to_Vector = V.fromList (b!!0)
+    update_Vector1 = to_Vector V.// [(2, Tile (White,King))]
+    update_Vector2 = update_Vector1 V.// [(4, EmptyTile)]
+    update_Vector3 = update_Vector2 V.// [(3, Tile (White,Rook))]
+    update_Vector4 = update_Vector3 V.// [(0, EmptyTile)]
+    outer_update1 = outerVector V.// [(0, V.toList update_Vector4)]
+    --final_updated_vector = outer_update1 V.// [((fst to), V.toList update_toVector)]
+    resulting_board = V.toList outer_update1
+
+doMove gs@(White,b,g,((p1lc, p1rc), (p2lc, p2rc))) RightCastle =
+  (Black, resulting_board, g, ((p1lc, False), (p2lc, p2rc))) where
+    --to_tile = (tileAt gs to)
+    outerVector = V.fromList b
+    from_Vector = V.fromList (b!!0)
+    to_Vector = V.fromList (b!!0)
+    update_Vector1 = to_Vector V.// [(6, Tile (White,King))]
+    update_Vector2 = update_Vector1 V.// [(4, EmptyTile)]
+    update_Vector3 = update_Vector2 V.// [(5, Tile (White,Rook))]
+    update_Vector4 = update_Vector3 V.// [(7, EmptyTile)]
+    outer_update1 = outerVector V.// [(0, V.toList update_Vector4)]
+    --final_updated_vector = outer_update1 V.// [((fst to), V.toList update_toVector)]
+    resulting_board = V.toList outer_update1
+
 
 -- Print the current state of the game
 printGame :: GameState -> IO ()
 printGame (c, b, _, _) = do
   print c
-  putStrLn "┌──┬──┬──┬──┬──┬──┬──┬──┐"
+  putStrLn "   ┌──┬──┬──┬──┬──┬──┬──┬──┐"
   sequence $ reverse (map (printRow) $ zip b [0..])
-  putStrLn "└──┴──┴──┴──┴──┴──┴──┴──┘"
+  putStrLn "   └──┴──┴──┴──┴──┴──┴──┴──┘"
+  putStrLn "    a  b  c  d  e  f  g  h  "
   return ()
   where
     printRow (r,n) = do
-      putStrLn $ concat ["│", show $ r!!0, "│", show $ r!!1, "│", show $ r!!2, "│", show $ r!!3, "│", show $ r!!4, "│", show $ r!!5, "│", show $ r!!6, "│", show $ r!!7, "│"]
-      if n == 0 then return () else putStrLn "├──┼──┼──┼──┼──┼──┼──┼──┤"
+      putStrLn $ concat [" ", show (n+1), " │", show $ r!!0, "│", show $ r!!1, "│", show $ r!!2, "│", show $ r!!3, "│", show $ r!!4, "│", show $ r!!5, "│", show $ r!!6, "│", show $ r!!7, "│"]
+      if n == 0 then return () else putStrLn ("" ++ "   ├──┼──┼──┼──┼──┼──┼──┼──┤")
 
 showLoc :: Location -> String
-showLoc (y,x) = (chr (ord 'a' + x)):(show (8 - y))
+showLoc (y,x) = (chr (ord 'a' + x)):(show (7 - y))

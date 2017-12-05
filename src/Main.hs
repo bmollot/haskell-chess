@@ -26,8 +26,8 @@ play player1@(p1_name,func) player2@(p2_name, func2) gs = do
   printGame newState
   case winningTeam newState of
     Nothing -> play player2 player1 newState
-    Just White -> putStrLn "Player1 won!"
-    Just Black -> putStrLn "Player2 won!"
+    Just White -> putStrLn "Player2 won!"
+    Just Black -> putStrLn "Player1 won!"
   --printGame newState
   --play player1 player2 newState
 --(player1, initState)
