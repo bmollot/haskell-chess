@@ -18,15 +18,16 @@ processMove gs = do
   let from = (fromRank-1, fromFileInt)
   let to = (toRank-1, toFileInt)
 
-  if(input == "castle queen side" && (LeftCastle `elem` validCastleMoves gs)) then do return (LeftCastle)
-    else if (input == "castle king side" && (RightCastle `elem` validCastleMoves gs)) then do return (RightCastle)
-         else if (not(piece `elem` "KQNRBP") || fromFile < 'a' || fromFile > 'h' || toFile < 'a' || fromFile > 'h' || fromRank < 1 ||
-                  fromRank > 8 || toRank < 1 || toRank > 8)
-              then putStrLn "Wrong input format, enter again :> " >> processMove gs
-              else if (length input == 8 && PawnPromote from to (charToPieceType (toUpper (input!!7))) `elem` validMoves gs) then
-                     do return (PawnPromote from to (charToPieceType (toUpper (input!!7))))
-                   else if (FromToMove from to `elem` validMoves gs) then do return (FromToMove from to)
-                        else putStrLn "Invalid move entered, enter a valid move :> " >> processMove gs
+  if(input == "forfeit") then do return (Forfeit) 
+    else if(input == "castle queen side" && (LeftCastle `elem` validCastleMoves gs)) then do return (LeftCastle)
+         else if (input == "castle king side" && (RightCastle `elem` validCastleMoves gs)) then do return (RightCastle)
+              else if (not(piece `elem` "KQNRBP") || fromFile < 'a' || fromFile > 'h' || toFile < 'a' || fromFile > 'h' || fromRank < 1 ||
+                       fromRank > 8 || toRank < 1 || toRank > 8)
+                   then putStrLn "Wrong input format, enter again :> " >> processMove gs
+                   else if (length input == 8 && PawnPromote from to (charToPieceType (toUpper (input!!7))) `elem` validMoves gs) then
+                          do return (PawnPromote from to (charToPieceType (toUpper (input!!7))))
+                        else if (FromToMove from to `elem` validMoves gs) then do return (FromToMove from to)
+                             else putStrLn "Invalid move entered, enter a valid move :> " >> processMove gs
   --else return (FromToMove (3,2) (3,3))
 
   

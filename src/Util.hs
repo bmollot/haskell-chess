@@ -186,40 +186,36 @@ initBoard =
 initState :: GameState
 initState = (White, initBoard, [], ((True, True), (True, True)))
 
+resultingBoard :: Board -> Location -> Location -> Tile -> Board
+resultingBoard b from@(y,x) to@(y',x') piece = newBoard where
+    outerVector = V.fromList b
+    from_Vector = V.fromList (b!!y)
+    --tile_piece = (tileAt gs from)
+    to_Vector = V.fromList (b!!(fst to))
+    update_toVector = to_Vector V.// [((snd to), piece)]
+    update_fromVector = from_Vector V.// [(x, EmptyTile)]
+    outer_update1 = outerVector V.// [(y, V.toList update_fromVector)]
+    final_updated_vector = outer_update1 V.// [((fst to), V.toList update_toVector)]
+    newBoard = V.toList final_updated_vector
+  
 -- Applies a move, changing piece positions and taking pieces if necessary
 doMove :: GameState -> Move -> GameState
 doMove gs@(Black,_,_,_) m = flipGame $ doMove (flipGame gs) (flipMove m)
 doMove gs@(White,b,g,((p1lc, p1rc), (p2lc, p2rc))) (FromToMove from@(y,x) to@(y', x')) =
-  (Black, resulting_board, updated_taken_lst, ((p1lc', p1rc'), (p2lc', p2rc'))) where
+  (Black, newBoard, updated_taken_lst, ((p1lc', p1rc'), (p2lc', p2rc'))) where
     updated_taken_lst = if to_tile == EmptyTile then g else let (Tile x) = to_tile in (x:g)
     to_tile = (tileAt gs to)
-    outerVector = V.fromList b
-    from_Vector = V.fromList (b!!y)
-    tile_piece = (tileAt gs from)
-    to_Vector = V.fromList (b!!(fst to))
-    update_toVector = to_Vector V.// [((snd to), tile_piece)]
-    update_fromVector = from_Vector V.// [(x, EmptyTile)]
-    outer_update1 = outerVector V.// [(y, V.toList update_fromVector)]
-    final_updated_vector = outer_update1 V.// [((fst to), V.toList update_toVector)]
-    resulting_board = V.toList final_updated_vector
+    newBoard = resultingBoard b from to (tileAt gs from)
     p1lc' = not ((y == 0) && (x == 0 || x == 4)) && p1lc
     p1rc' = not ((y == 0) && (x == 7 || x == 4)) && p1rc
     p2lc' = not ((y' == 0) && (x' == 0 || x' == 4)) && p2lc
     p2rc' = not ((y' == 0) && (x' == 7 || x' == 4)) && p2rc
 
 doMove gs@(White,b,g,((p1lc, p1rc), (p2lc, p2rc))) (PawnPromote from@(y,x) to@(y', x') piece) =
-  (Black, resulting_board, updated_taken_lst, ((p1lc', p1rc'), (p2lc', p2rc'))) where
+  (Black, newBoard, updated_taken_lst, ((p1lc', p1rc'), (p2lc', p2rc'))) where
     updated_taken_lst = if to_tile == EmptyTile then g else let (Tile x) = to_tile in (x:g)
     to_tile = (tileAt gs to)
-    outerVector = V.fromList b
-    from_Vector = V.fromList (b!!y)
-    tile_piece = (tileAt gs from)
-    to_Vector = V.fromList (b!!(fst to))
-    update_toVector = to_Vector V.// [((snd to), Tile (White,piece))]
-    update_fromVector = from_Vector V.// [(x, EmptyTile)]
-    outer_update1 = outerVector V.// [(y, V.toList update_fromVector)]
-    final_updated_vector = outer_update1 V.// [((fst to), V.toList update_toVector)]
-    resulting_board = V.toList final_updated_vector
+    newBoard = resultingBoard b from to (Tile (White, piece))
     p1lc' = not ((y == 0) && (x == 0 || x == 4)) && p1lc
     p1rc' = not ((y == 0) && (x == 7 || x == 4)) && p1rc
     p2lc' = not ((y' == 0) && (x' == 0 || x' == 4)) && p2lc
@@ -262,7 +258,7 @@ doMove gs _ = gs
 printGame :: GameState -> IO ()
 printGame (c, b, g, _) = do
   print c
-  print g
+  --print g
   putStrLn "   ┌──┬──┬──┬──┬──┬──┬──┬──┐"
   sequence $ reverse (map (printRow) $ zip b [0..])
   putStrLn "   └──┴──┴──┴──┴──┴──┴──┴──┘"

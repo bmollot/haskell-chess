@@ -19,7 +19,7 @@ runHumanGame = do
   player1_name <- getLine
   putStrLn "Enter Player 2's name: "
   player2_name <- getLine
-  putStrLn "\ninitial board setup "
+  putStrLn "\n initial board setup "
   printGame initState
   play (player1_name, Hum.processMove) (player2_name, Hum.processMove) initState
   putStrLn ("\nGoodBye")
@@ -31,15 +31,18 @@ runTest = do
 
 
 play :: Player -> Player -> GameState -> IO ()
-play player1@(p1_name,func) player2 gs = do
+play player1@(p1_name,func) player2@(p2_name,func2) gs = do
   move <- func gs
-  let newState = doMove gs move
-  putStrLn ("\n board after " ++ p1_name ++ "'s move ")
-  printGame newState
-  case winningTeam newState of
-    Nothing -> play player2 player1 newState
-    Just White -> putStrLn "Player2 won!"
-    Just Black -> putStrLn "Player1 won!"
+  if (move /= Forfeit) then do
+        let newState = doMove gs move
+        putStrLn ("\n board after " ++ p1_name ++ "'s move ")
+        printGame newState
+        case winningTeam newState of
+            Nothing -> play player2 player1 newState
+            Just White -> putStrLn ("Player2 won!")
+            Just Black -> putStrLn ("Player1 won!")
+    else do putStrLn (p2_name ++ " won!")
+
   --printGame newState
   --play player1 player2 newState
 --(player1, initState)
